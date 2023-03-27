@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"myapp/internal/driver"
 	"net/http"
 	"os"
+	"terminus/internal/driver"
 	"time"
 )
 

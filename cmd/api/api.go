@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"myapp/internal/driver"
 	"net/http"
 	"os"
+	"terminus/internal/driver"
 	"time"
 )
 

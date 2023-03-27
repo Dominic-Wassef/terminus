@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"myapp/internal/cards"
 	"net/http"
 	"strconv"
+	"terminus/internal/cards"
 )
 
 type stripePayload struct {
