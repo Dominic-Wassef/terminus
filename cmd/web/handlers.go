@@ -1,17 +1,18 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+	"terminus/internal/models"
+)
 
+// VirtualTerminal displays the virtual terminal page
 func (app *application) VirtualTerminal(w http.ResponseWriter, r *http.Request) {
-	stringMap := make(map[string]string)
-	stringMap["publishable_key"] = app.config.stripe.key
-	if err := app.renderTemplate(w, r, "terminal", &templateData{
-		StringMap: stringMap,
-	}); err != nil {
+	if err := app.renderTemplate(w, r, "terminal", &templateData{}, "stripe-js"); err != nil {
 		app.errorLog.Println(err)
 	}
 }
 
+// PaymentSucceeded displays the receipt page
 func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -28,7 +29,6 @@ func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request)
 	paymentCurrency := r.Form.Get("payment_currency")
 
 	data := make(map[string]interface{})
-
 	data["cardholder"] = cardHolder
 	data["email"] = email
 	data["pi"] = paymentIntent
@@ -36,17 +36,32 @@ func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request)
 	data["pa"] = paymentAmount
 	data["pc"] = paymentCurrency
 
+	// should write this data to session, and then redirect user to new page?
+
 	if err := app.renderTemplate(w, r, "succeeded", &templateData{
 		Data: data,
 	}); err != nil {
 		app.errorLog.Println(err)
-		return
 	}
 }
 
-// ChargeOnce displays the page to charge the widget
+// ChargeOnce displays the page to buy one widget
 func (app *application) ChargeOnce(w http.ResponseWriter, r *http.Request) {
-	if err := app.renderTemplate(w, r, "buy-once", nil); err != nil {
+
+	widget := models.Widget{
+		ID:             1,
+		Name:           "Custom Widget",
+		Description:    "A very nice widget",
+		InventoryLevel: 10,
+		Price:          1000,
+	}
+
+	data := make(map[string]interface{})
+	data["widget"] = widget
+
+	if err := app.renderTemplate(w, r, "buy-once", &templateData{
+		Data: data,
+	}, "stripe-js"); err != nil {
 		app.errorLog.Println(err)
 	}
 }
