@@ -3,3 +3,5 @@ Makefile
 /dist
 /tmp
 /migrations/database.yml
+/migrations/.DS_Store
+/migrations/migrations/.DS_Store
