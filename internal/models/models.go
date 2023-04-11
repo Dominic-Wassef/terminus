@@ -16,57 +16,100 @@ type Models struct {
 	DB DBModel
 }
 
-// NewModels returns a model type with db connection pool
+// NewModels returns a model type with database connection pool
 func NewModels(db *sql.DB) Models {
 	return Models{
 		DB: DBModel{DB: db},
 	}
 }
 
-// This is the type to hold our widgets
+// Widget is the type for all widgets
 type Widget struct {
 	ID             int       `json:"id"`
 	Name           string    `json:"name"`
 	Description    string    `json:"description"`
 	InventoryLevel int       `json:"inventory_level"`
 	Price          int       `json:"price"`
+	Image          string    `json:"image"`
 	CreatedAt      time.Time `json:"-"`
 	UpdatedAt      time.Time `json:"-"`
 }
 
+// Order is the type for all orders
 type Order struct {
-	ID            int
-	WidgetID      int
-	TransactionID int
-	StatusID      int
-	Quantity      int
-	Amount        int
+	ID            int       `json:"id"`
+	WidgetID      int       `json:"widget_id"`
+	TransactionID int       `json:"transaction_id"`
+	StatusID      int       `json:"status_id"`
+	Quantity      int       `json:"quantity"`
+	Amount        int       `json:"amount"`
+	CreatedAt     time.Time `json:"-"`
+	UpdatedAt     time.Time `json:"-"`
 }
 
+// Status is the type for order statuses
+type Status struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"-"`
+}
+
+// TransactionStatus is the type for transaction statuses
+type TransactionStatus struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"-"`
+}
+
+// Transaction is the type for transactions
+type Transaction struct {
+	ID                  int       `json:"id"`
+	Amount              int       `json:"amount"`
+	Currency            string    `json:"currency"`
+	LastFour            string    `json:"last_four"`
+	BankReturnCode      string    `json:"bank_return_code"`
+	TransactionStatusID int       `json:"transaction_status_id"`
+	CreatedAt           time.Time `json:"-"`
+	UpdatedAt           time.Time `json:"-"`
+}
+
+// User is the type for users
+type User struct {
+	ID        int       `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email"`
+	Password  string    `json:"password"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"-"`
+}
+
+// GetWidget gets one widget by id
 func (m *DBModel) GetWidget(id int) (Widget, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	var widget Widget
 
-	row := m.DB.QueryRowContext(ctx, "select id, name from widgets where id = ?", id)
-	err := row.Scan(&widget.ID, &widget.Name)
-	if err != nil {
-		return widget, err
-	}
-
-	return widget, nil
-}
-
-// Write a function to create a model that will take in a struct called "respWidget"
-func (m *DBModel) CreateWidget(respWidget Widget) (Widget, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	var widget Widget
-
-	row := m.DB.QueryRowContext(ctx, "insert into widgets (name, description, inventory_level, price) values (?, ?, ?, ?)", respWidget.Name, respWidget.Description, respWidget.InventoryLevel, respWidget.Price)
-	err := row.Scan(&widget.ID, &widget.Name)
+	row := m.DB.QueryRowContext(ctx, `
+		select
+			id, name, description, inventory_level, price, coalesce(image, ''),
+			created_at, updated_at
+		from
+			widgets
+		where id = ?`, id)
+	err := row.Scan(
+		&widget.ID,
+		&widget.Name,
+		&widget.Description,
+		&widget.InventoryLevel,
+		&widget.Price,
+		&widget.Image,
+		&widget.CreatedAt,
+		&widget.UpdatedAt,
+	)
 	if err != nil {
 		return widget, err
 	}
