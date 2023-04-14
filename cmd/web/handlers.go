@@ -15,6 +15,13 @@ func (app *application) VirtualTerminal(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// Home displays the home page
+func (app *application) Home(w http.ResponseWriter, r *http.Request) {
+	if err := app.renderTemplate(w, r, "home", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
 // PaymentSucceeded displays the receipt page
 func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
@@ -53,6 +60,12 @@ func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request)
 	lastFour := pm.Card.Last4
 	expiryMonth := pm.Card.ExpMonth
 	expiryYear := pm.Card.ExpYear
+
+	// create a new customer
+
+	// create a new order
+
+	// create a new transcation
 
 	data := make(map[string]interface{})
 	data["cardholder"] = cardHolder
