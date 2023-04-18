@@ -89,7 +89,7 @@ type User struct {
 	UpdatedAt time.Time `json:"-"`
 }
 
-// Customer is the type for Customers
+// Customer is the type for customers
 type Customer struct {
 	ID        int       `json:"id"`
 	FirstName string    `json:"first_name"`
@@ -130,7 +130,7 @@ func (m *DBModel) GetWidget(id int) (Widget, error) {
 	return widget, nil
 }
 
-// InsertTransaction inserts a new txn and returns its id
+// InsertTransaction inserts a new txn, and returns its id
 func (m *DBModel) InsertTransaction(txn Transaction) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -154,23 +154,25 @@ func (m *DBModel) InsertTransaction(txn Transaction) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
+
 	return int(id), nil
 }
 
-// InsertOrder inserts a new txn and returns its id
+// InsertOrder inserts a new order, and returns its id
 func (m *DBModel) InsertOrder(order Order) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	stmt := `
 		insert into orders
-			(widget_id, transaction_id, status_id, quantity,
+			(widget_id, transaction_id, status_id, quantity, customer_id,
 			amount, created_at, updated_at)
-		values (?, ?, ?, ?, ?, ?, ?)
+		values (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	result, err := m.DB.ExecContext(ctx, stmt,
@@ -178,6 +180,7 @@ func (m *DBModel) InsertOrder(order Order) (int, error) {
 		order.TransactionID,
 		order.StatusID,
 		order.Quantity,
+		order.CustomerID,
 		order.Amount,
 		time.Now(),
 		time.Now(),
@@ -185,14 +188,16 @@ func (m *DBModel) InsertOrder(order Order) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
+
 	return int(id), nil
 }
 
-// InsertCustomer inserts a new txn and returns its id
+// InsertOrder inserts a new order, and returns its id
 func (m *DBModel) InsertCustomer(c Customer) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -212,9 +217,11 @@ func (m *DBModel) InsertCustomer(c Customer) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
+
 	return int(id), nil
 }
