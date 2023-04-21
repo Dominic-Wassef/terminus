@@ -1,0 +1,3 @@
+drop_column("widgets", "is_recurring")
+drop_column("widgets", "plan_id")
+
