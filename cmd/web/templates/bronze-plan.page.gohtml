@@ -142,8 +142,8 @@
           card_brand: result.paymentMethod.card.brand,
           exp_month: result.paymentMethod.card.exp_month,
           exp_year: result.paymentMethod.card.exp_year,
-          first_name: document.getElementById.("first-name").value,
-          last_name: document.getElementById.("last-name").value,
+          first_name: document.getElementById("first-name").value,
+          last_name: document.getElementById("last-name").value,
           amount: document.getElementById("amount").value,
       }
 
@@ -161,9 +161,13 @@
           .then(function(data) {
               console.log(data);
               processing.classList.add("d-none");
-              // set hidden vars
-              // submit form
+              showCardSuccess();
+              sessionStorage.first_name = document.getElementById("first-name").value;
+              sessionStorage.last_name = document.getElementById("last-name").value;
+              sessionStorage.amount = "{{formatCurrency $widget.Price}}";
+              sessionStorage.last_four = result.paymentMethod.card.last4;
 
+              location.href = "/receipt/bronze";
           })
       }
   }
