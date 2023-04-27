@@ -226,6 +226,7 @@ func (app *application) SaveCustomer(firstName, lastName, email string) (int, er
 	return id, nil
 }
 
+// SaveTransaction saves a txn and returns id
 func (app *application) SaveTransaction(txn models.Transaction) (int, error) {
 	id, err := app.DB.InsertTransaction(txn)
 	if err != nil {
@@ -234,6 +235,7 @@ func (app *application) SaveTransaction(txn models.Transaction) (int, error) {
 	return id, nil
 }
 
+// SaveOrder saves a order and returns id
 func (app *application) SaveOrder(order models.Order) (int, error) {
 	id, err := app.DB.InsertOrder(order)
 	if err != nil {
@@ -254,6 +256,29 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// get the user from the database by email; send error if invalid email
+	user, err := app.DB.GetUserByEmail(userInput.Email)
+	if err != nil {
+		app.invalidCredentials(w)
+		return
+	}
+
+	// validate the password; send error if invalid password
+	validPassword, err := app.passwordMatches(user.Password, userInput.Password)
+	if err != nil {
+		app.invalidCredentials(w)
+		return
+	}
+
+	if !validPassword {
+		app.invalidCredentials(w)
+		return
+	}
+
+	// generate the token
+
+	// send response
+
 	var payload struct {
 		Error   bool   `json:"error"`
 		Message string `json:"message"`
@@ -261,7 +286,5 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 	payload.Error = false
 	payload.Message = "Success!"
 
-	out, _ := json.MarshalIndent(payload, "", "\t")
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(out)
+	_ = app.writeJSON(w, http.StatusOK, payload)
 }
