@@ -1,1 +1,1 @@
-drop_tabl e("customers")
+drop_table("customers")
