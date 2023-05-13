@@ -248,10 +248,10 @@ func (m *DBModel) GetUserByEmail(email string) (User, error) {
 	var u User
 
 	row := m.DB.QueryRowContext(ctx, `
-		select 
-		  id, first_name, last_name, email, password, created_at, updated_at
-		from 
-		  users
+		select
+			id, first_name, last_name, email, password, created_at, updated_at
+		from
+			users
 		where email = ?`, email)
 
 	err := row.Scan(
@@ -263,6 +263,7 @@ func (m *DBModel) GetUserByEmail(email string) (User, error) {
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
+
 	if err != nil {
 		return u, err
 	}

@@ -8,12 +8,14 @@ import (
 	"github.com/stripe/stripe-go/v72/sub"
 )
 
+// Card holds the information needed by this package
 type Card struct {
 	Secret   string
 	Key      string
 	Currency string
 }
 
+// Transaction is the type to store information for a given transaction
 type Transaction struct {
 	TransactionStatusID int
 	Amount              int
@@ -22,10 +24,12 @@ type Transaction struct {
 	BankReturnCode      string
 }
 
+// Charge is an alias to CreatePaymentIntent
 func (c *Card) Charge(currency string, amount int) (*stripe.PaymentIntent, string, error) {
 	return c.CreatePaymentIntent(currency, amount)
 }
 
+// CreatePaymentIntent attempts to get a payment intent object from Stripe
 func (c *Card) CreatePaymentIntent(currency string, amount int) (*stripe.PaymentIntent, string, error) {
 	stripe.Key = c.Secret
 
@@ -48,7 +52,7 @@ func (c *Card) CreatePaymentIntent(currency string, amount int) (*stripe.Payment
 	return pi, "", nil
 }
 
-// GetPaymentMethod: Gets the payment method by payment-intent id
+// GetPaymentMethod gets the payment method by payment intend id
 func (c *Card) GetPaymentMethod(s string) (*stripe.PaymentMethod, error) {
 	stripe.Key = c.Secret
 
@@ -70,6 +74,7 @@ func (c *Card) RetrievePaymentIntent(id string) (*stripe.PaymentIntent, error) {
 	return pi, nil
 }
 
+// SubscribeToPlan subscribes a stripe customer to a stripe plan
 func (c *Card) SubscribeToPlan(cust *stripe.Customer, plan, email, last4, cardType string) (*stripe.Subscription, error) {
 	stripeCustomerID := cust.ID
 	items := []*stripe.SubscriptionItemsParams{
@@ -91,6 +96,7 @@ func (c *Card) SubscribeToPlan(cust *stripe.Customer, plan, email, last4, cardTy
 	return subscription, nil
 }
 
+// CreateCustomer creates a stripe customer
 func (c *Card) CreateCustomer(pm, email string) (*stripe.Customer, string, error) {
 	stripe.Key = c.Secret
 	customerParams := &stripe.CustomerParams{
@@ -101,7 +107,6 @@ func (c *Card) CreateCustomer(pm, email string) (*stripe.Customer, string, error
 		},
 	}
 
-	// Creating a customer
 	cust, err := customer.New(customerParams)
 	if err != nil {
 		msg := ""
@@ -113,6 +118,7 @@ func (c *Card) CreateCustomer(pm, email string) (*stripe.Customer, string, error
 	return cust, "", nil
 }
 
+// cardErrorMessage returns human readable versions of card error messages
 func cardErrorMessage(code stripe.ErrorCode) string {
 	var msg = ""
 	switch code {
