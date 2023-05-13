@@ -91,6 +91,7 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// GetWidgetByID gets one widget by id and returns as JSON
 func (app *application) GetWidgetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	widgetID, _ := strconv.Atoi(id)
@@ -129,7 +130,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 
 	okay := true
 	var subscription *stripe.Subscription
-	txnMsg := "Transaction Successful!"
+	txnMsg := "Transaction successful"
 
 	stripeCustomer, msg, err := card.CreateCustomer(data.PaymentMethod, data.Email)
 	if err != nil {
@@ -145,24 +146,18 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 			okay = false
 			txnMsg = "Error subscribing customer"
 		}
-		app.infoLog.Println("subscription id is:", subscription.ID)
+		app.infoLog.Println("subscription id is", subscription.ID)
 	}
 
-	// Create transaction, creating a customer locally, creating a order and saving
 	if okay {
-		productID, err := strconv.Atoi(data.ProductID)
-		if err != nil {
-			app.errorLog.Print(err)
-			return
-		}
-
+		productID, _ := strconv.Atoi(data.ProductID)
 		customerID, err := app.SaveCustomer(data.FirstName, data.LastName, data.Email)
 		if err != nil {
 			app.errorLog.Println(err)
 			return
 		}
 
-		// create a new transaction
+		// create a new txn
 		amount, _ := strconv.Atoi(data.Amount)
 		// expiryMonth, _ := strconv.Atoi(data.ExpiryMonth)
 		// expiryYear, _ := strconv.Atoi(data.ExpiryYear)
@@ -205,7 +200,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 		Message: txnMsg,
 	}
 
-	out, err := json.MarshalIndent(resp, "", "   ")
+	out, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		app.errorLog.Println(err)
 		return
@@ -215,6 +210,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 	w.Write(out)
 }
 
+// SaveCustomer saves a customer and returns id
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
 	customer := models.Customer{
 		FirstName: firstName,
@@ -285,7 +281,7 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// save token to database
+	// save to database
 	err = app.DB.InsertToken(token, user)
 	if err != nil {
 		app.badRequest(w, r, err)
@@ -293,13 +289,14 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// send response
+
 	var payload struct {
 		Error   bool          `json:"error"`
 		Message string        `json:"message"`
 		Token   *models.Token `json:"authentication_token"`
 	}
 	payload.Error = false
-	payload.Message = fmt.Sprintf("Token for %s created", userInput.Email)
+	payload.Message = fmt.Sprintf("token for %s created", userInput.Email)
 	payload.Token = token
 
 	_ = app.writeJSON(w, http.StatusOK, payload)
@@ -307,7 +304,6 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 
 func (app *application) authenticateToken(r *http.Request) (*models.User, error) {
 	authorizationHeader := r.Header.Get("Authorization")
-	// check to see if it exists
 	if authorizationHeader == "" {
 		return nil, errors.New("no authorization header received")
 	}
@@ -322,7 +318,7 @@ func (app *application) authenticateToken(r *http.Request) (*models.User, error)
 		return nil, errors.New("authentication token wrong size")
 	}
 
-	// get user from the tokens table
+	// get the user from the tokens table
 	user, err := app.DB.GetUserForToken(token)
 	if err != nil {
 		return nil, errors.New("no matching user found")
@@ -332,7 +328,7 @@ func (app *application) authenticateToken(r *http.Request) (*models.User, error)
 }
 
 func (app *application) CheckAuthentication(w http.ResponseWriter, r *http.Request) {
-	// validate token and get associated user
+	// validate the token, and get associated user
 	user, err := app.authenticateToken(r)
 	if err != nil {
 		app.invalidCredentials(w)
@@ -344,8 +340,70 @@ func (app *application) CheckAuthentication(w http.ResponseWriter, r *http.Reque
 		Error   bool   `json:"error"`
 		Message string `json:"message"`
 	}
-
 	payload.Error = false
 	payload.Message = fmt.Sprintf("authenticated user %s", user.Email)
 	app.writeJSON(w, http.StatusOK, payload)
+}
+
+func (app *application) VirtualTerminalPaymentSucceeded(w http.ResponseWriter, r *http.Request) {
+	var txnData struct {
+		PaymentAmount   int    `json:"amount"`
+		PaymentCurrency string `json:"currency"`
+		FirstName       string `json:"first_name"`
+		LastName        string `json:"last_name"`
+		Email           string `json:"email"`
+		PaymentIntent   string `json:"payment_intent"`
+		PaymentMethod   string `json:"payment_method"`
+		BankReturnCode  string `json:"bank_return_code"`
+		ExpiryMonth     int    `json:"expiry_month"`
+		ExpiryYear      int    `json:"expiry_year"`
+		LastFour        string `json:"last_four"`
+	}
+
+	err := app.readJSON(w, r, &txnData)
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	card := cards.Card{
+		Secret: app.config.stripe.secret,
+		Key:    app.config.stripe.key,
+	}
+
+	pi, err := card.RetrievePaymentIntent(txnData.PaymentIntent)
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	pm, err := card.GetPaymentMethod(txnData.PaymentMethod)
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	txnData.LastFour = pm.Card.Last4
+	txnData.ExpiryMonth = int(pm.Card.ExpMonth)
+	txnData.ExpiryYear = int(pm.Card.ExpYear)
+
+	txn := models.Transaction{
+		Amount:              txnData.PaymentAmount,
+		Currency:            txnData.PaymentCurrency,
+		LastFour:            txnData.LastFour,
+		ExpiryMonth:         txnData.ExpiryMonth,
+		ExpiryYear:          txnData.ExpiryYear,
+		PaymentIntent:       txnData.PaymentIntent,
+		PaymentMethod:       txnData.PaymentMethod,
+		BankReturnCode:      pi.Charges.Data[0].ID,
+		TransactionStatusID: 2,
+	}
+
+	_, err = app.SaveTransaction(txn)
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, txn)
 }
