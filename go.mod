@@ -3,6 +3,7 @@ module terminus
 go 1.20
 
 require (
+	github.com/alexedwards/scs/mysqlstore v0.0.0-20230327161757-10d4299e3b24
 	github.com/alexedwards/scs/v2 v2.5.1
 	github.com/go-chi/chi/v5 v5.0.3
 	github.com/go-chi/cors v1.2.0
@@ -10,5 +11,3 @@ require (
 	github.com/stripe/stripe-go/v72 v72.51.0
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 )
-
-require github.com/alexedwards/scs/mysqlstore v0.0.0-20230327161757-10d4299e3b24 // indirect
