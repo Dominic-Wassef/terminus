@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"terminus/internal/cards"
 	"terminus/internal/models"
+	"terminus/internal/urlsigner"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -333,6 +335,31 @@ func (app *application) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if err := app.renderTemplate(w, r, "forgot-password", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) ShowResetPassword(w http.ResponseWriter, r *http.Request) {
+	theURL := r.RequestURI
+	testURL := fmt.Sprintf("%s%s", app.config.frontend, theURL)
+
+	signer := urlsigner.Signer{
+		Secret: []byte(app.config.secretkey),
+	}
+
+	valid := signer.VerifyToken(testURL)
+
+	if !valid {
+		w.Write([]byte("Invalid url - tampering detected"))
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["email"] = r.URL.Query().Get("email")
+
+	if err := app.renderTemplate(w, r, "reset-password", &templateData{
+		Data: data,
+	}); err != nil {
 		app.errorLog.Println(err)
 	}
 }
