@@ -9,6 +9,7 @@ import (
 	"strings"
 	"terminus/internal/cards"
 	"terminus/internal/models"
+	"terminus/internal/urlsigner"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -419,11 +420,32 @@ func (app *application) SendPasswordResetEmail(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// verify email exists
+	_, err = app.DB.GetUserByEmail(payload.Email)
+	if err != nil {
+		var resp struct {
+			Error   bool   `json:"error"`
+			Message string `json:"message"`
+		}
+		resp.Error = true
+		resp.Message = "No matching email found on our system"
+		app.writeJSON(w, http.StatusAccepted, resp)
+		return
+	}
+
+	link := fmt.Sprintf("%s/reset-password?email=%s", app.config.frontend, payload.Email)
+
+	sign := urlsigner.Signer{
+		Secret: []byte(app.config.secretkey),
+	}
+
+	signedLink := sign.GenerateTokenFromString(link)
+
 	var data struct {
 		Link string
 	}
 
-	data.Link = "http://www.ufl.edu"
+	data.Link = signedLink
 
 	// send email
 	err = app.SendMail("info@terminus.com", "info@terminus.com", "Password reset request", "password-reset", data)
