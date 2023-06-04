@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"terminus/internal/cards"
+	"terminus/internal/encryption"
 	"terminus/internal/models"
 	"terminus/internal/urlsigner"
 	"time"
@@ -478,7 +479,17 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.DB.GetUserByEmail(payload.Email)
+	encryptor := encryption.Encryption{
+		Key: []byte(app.config.secretkey),
+	}
+
+	realEmail, err := encryptor.Decrypt(payload.Email)
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	user, err := app.DB.GetUserByEmail(realEmail)
 	if err != nil {
 		app.badRequest(w, r, err)
 		return
