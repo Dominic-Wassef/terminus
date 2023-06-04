@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"terminus/internal/cards"
+	"terminus/internal/encryption"
 	"terminus/internal/models"
 	"terminus/internal/urlsigner"
 	"time"
@@ -340,6 +341,7 @@ func (app *application) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) ShowResetPassword(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
 	theURL := r.RequestURI
 	testURL := fmt.Sprintf("%s%s", app.config.frontend, theURL)
 
@@ -350,12 +352,29 @@ func (app *application) ShowResetPassword(w http.ResponseWriter, r *http.Request
 	valid := signer.VerifyToken(testURL)
 
 	if !valid {
-		w.Write([]byte("Invalid url - tampering detected"))
+		app.errorLog.Println("Invalid url - tampering detected")
+		return
+	}
+
+	// make sure not expired - 60 minutes
+	expired := signer.Expired(testURL, 60)
+	if expired {
+		app.errorLog.Println("Link expired")
+		return
+	}
+
+	encryptor := encryption.Encryption{
+		Key: []byte(app.config.secretkey),
+	}
+
+	encryptedEmail, err := encryptor.Encrypt(email)
+	if err != nil {
+		app.errorLog.Println("Encryption failed")
 		return
 	}
 
 	data := make(map[string]interface{})
-	data["email"] = r.URL.Query().Get("email")
+	data["email"] = encryptedEmail
 
 	if err := app.renderTemplate(w, r, "reset-password", &templateData{
 		Data: data,
